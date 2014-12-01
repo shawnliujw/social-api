@@ -1,0 +1,29 @@
+{
+  "name": "application-name",
+  "version": "0.0.1",
+  "main": "server/app.js",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "sinon": "^1.12.1",
+    "supertest": "~0.11.0",
+    "chai": "^1.10.0"
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "license":"MIT",
+  "keywords":[
+    "nodjes",
+    "social",
+    "api",
+    "automate",
+    "twitter",
+    "casperjs"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:shawnLiujianwei/social-api.git"
+  },
+  "private": false
+}
