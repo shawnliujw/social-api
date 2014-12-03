@@ -6,8 +6,8 @@
     8587
   ],
   "casper": {
-    "logLevel": "warning",
-    "logFile": "./casper.log"
+    "timeout": 45000,
+    "logLevel": "debug"
   },
   "maxQueueSize": 200,
   "maxWorkerJobs": 400,
@@ -20,9 +20,12 @@
         }
       ],
       "levels": {
-        "[all]": "debug"
+        "[all]": "warning"
       },
       "replaceConsole": true
     }
+  },
+  "socialSites": {
+    "twitter.com": "http://www.baidu.com"
   }
 }

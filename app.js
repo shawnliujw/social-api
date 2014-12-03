@@ -1,7 +1,6 @@
 var express = require('express');
 var http = require('http');
-var dispatcher = require("./lib/dispatcher");
-var systemMonitor = require("./lib/systemMonitor");
+var dispatcher = require("./app/lib/dispatcher");
 var config = require("config");
 var morgan = require('morgan');
 var compression = require('compression');
@@ -12,7 +11,6 @@ var errorhandler = require('errorhandler');
 // all environments
 
 var app = express();
-
 app.use(compression());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
@@ -29,5 +27,4 @@ dispatcher.create().then(function () {
         console.log('Express server listening on port ' + app.get('port'));
     });
 });
-
-systemMonitor.start();
+module.exports = app;
