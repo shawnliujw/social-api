@@ -1,0 +1,23 @@
+{
+  "ports": [
+    8587,
+    8590
+  ],
+  "casper": {
+    "logLevel": "error",
+    "logFile": "./casper.log"
+  },
+  "nodeLog": {
+    "configuration": {
+      "appenders": [
+        {
+          "type": "console"
+        }
+      ],
+      "levels": {
+        "[all]": "info"
+      },
+      "replaceConsole": true
+    }
+  }
+}

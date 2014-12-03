@@ -1,0 +1,28 @@
+{
+  "listener": {
+    "port": 8586
+  },
+  "ports": [
+    8587
+  ],
+  "casper": {
+    "logLevel": "warning",
+    "logFile": "./casper.log"
+  },
+  "maxQueueSize": 200,
+  "maxWorkerJobs": 400,
+  "maxWorkerLifetime": 7200,
+  "nodeLog": {
+    "configuration": {
+      "appenders": [
+        {
+          "type": "console"
+        }
+      ],
+      "levels": {
+        "[all]": "debug"
+      },
+      "replaceConsole": true
+    }
+  }
+}
