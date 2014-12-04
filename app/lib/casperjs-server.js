@@ -11,9 +11,18 @@ var casper = require('casper').create({
     logLevel: 'debug'
 });
 
-var port = 8587;
+var config = {};
 if (system.args[4]) {
-    port = system.args[4];
+    var t = system.args[4].split("~");
+    if (t[0]) {
+        config.port = t[0];
+    }
+    if (t[1]) {
+        config.username = t[1];
+    }
+    if (t[2]) {
+        config.password = t[2];
+    }
 }
 var server = require('webserver').create();
 var CookieTool = require("./cookie.js");
@@ -24,7 +33,7 @@ var CookieTool = require("./cookie.js");
 //});
 casper.start();
 var timeout = 20000;//10 seconds
-var serverStatus = server.listen(port, function (request, response) {
+var serverStatus = server.listen(config.port, function (request, response) {
     casper.then(function () {
         //var method = request.method;
         switch (request.url) {
@@ -67,12 +76,12 @@ var serverStatus = server.listen(port, function (request, response) {
         casper.log("Resource error:" + JSON.stringify(resourceError), "debug");
     });
     casper.run(function () {
-        casper.log("Casper listening on port " + port, "info");
+        casper.log("Casper listening on port " + config.port, "info");
     });
 });
 
 if (!serverStatus) {
-    casper.log("Failed to listen on port " + port, "error");
+    casper.log("Failed to listen on port " + config.port, "error");
     casper.exit(1);
 }
 

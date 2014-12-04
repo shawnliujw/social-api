@@ -4,42 +4,127 @@ var path = require("path");
 var config = require("config");
 var scriptFiles = require("./site-script");
 var async = require("async");
-
+var _ = require("lodash");
 var BatchRequest = require("./BatchRequest");
 var PhantomInstance = require("./PhantomInstance");
-
-var scrapeTimeout = 45000; // 45 seconds
-
+var freeport = require("freeport");
 // map fo phantom instances
 var phantomInstances = [];
-var nRequests = 0, nFailures = 0, nPending = 0;
 
 exports.create = function () {
-    var promises = [];
-    config.ports.forEach(function (port) {
-        var instance = new PhantomInstance({
-            port: port,
-            requestTimeout: scrapeTimeout
-        });
-        phantomInstances.push(instance);
-        promises.push(instance.start());
-    });
-    return Promise.all(promises);
+    return _getProxies()
+        .then(function (proxies) {
+            var promises = [];
+            proxies.forEach(function (proxy) {
+                var instance = new PhantomInstance({
+                    proxy: proxy
+                });
+                phantomInstances.push(instance);
+                promises.push(instance.start());
+            });
+            return Promise.all(promises);
+        })
+
 };
 
+function _getProxies() {
+    var promises = [];
+    config.proxies.forEach(function (proxy) {
+        if (!proxy.port) {
+            var promise = _freePort()
+                .then(function (port) {
+                    proxy.port = port;
+                    return proxy;
+                });
+            promises.push(promise);
+        }
+    });
+    return Promise.all(promises)
+        .then(function (result) {
+            return config.proxies;
+        });
+}
+
+function _freePort() {
+    return new Promise(function (resolve, reject) {
+        freeport(function (err, port) {
+            resolve(port);
+        });
+    });
+}
 
 var lastPick = 0;
-exports.getAvailablePhantomInstance = function () {
-    for (var i = 0; i < phantomInstances.length; i++) {
-        var instance = phantomInstances[lastPick++ % phantomInstances.length];
-        if (instance.queue.size() < config.maxQueueSize) {
-            return instance.start();
-        } else {
-            logger.warn("phantom worker " + instance.id + " queue is full " + instance.queue.size());
-        }
-    }
-    return Promise.reject("All queues are full");
+exports.getAvailablePhantomInstance = function (ac) {
+    return refreshProxies()
+        .then(function () {
+            var key = ac.site + "@" + ac.email;
+            var instance = _.find(this.accounts, key);
+            if (!instance || !(instance.queue.size() < config.maxQueueSize)) {
+                for (var i = 0; i < phantomInstances.length; i++) {
+                    instance = phantomInstances[lastPick++ % phantomInstances.length];
+                    if (instance.queue.size() < config.maxQueueSize) {
+                        return instance.start();
+                    } else {
+                        logger.warn("phantom worker " + instance.id + " queue is full " + instance.queue.size());
+                    }
+                }
+            } else {
+                return instance.start();
+            }
+            return Promise.reject("All queues are full");
+        });
+
+
 };
+
+exports.refreshProxies = refreshProxies;
+
+function refreshProxies() {
+    return _getProxies()
+        .then(function (proxies) {
+            if (proxies.length !== phantomInstances.length) {
+                return _killServerNotInProxies()
+                    .then(_startNewServer);
+            } else {
+                return Promise.resolve();
+            }
+        });
+}
+function _startNewServer() {
+    var proxies = config.proxies;
+    var array = [];
+    proxies.forEach(function (proxy) {
+        if (!_.find(phantomInstances, {"proxy": proxy})) {
+            var instance = new PhantomInstance({
+                proxy: proxy
+            });
+            phantomInstances.push(instance);
+            array.push(instance.start());
+        }
+    });
+    if (array.length > 0) {
+        return Promise.all(array);
+    } else {
+        return Promise.resolve();
+    }
+}
+
+function _killServerNotInProxies() {
+    var array = [];
+    var proxies = config.proxies;
+    phantomInstances = phantomInstances.filter(function (ph) {
+        if (!_.find(proxies, ph.proxy)) {
+            array.push(ph.stop());
+        }
+        return flag;
+    });
+
+    if (array.length > 0) {
+        return Promise.all(array);
+    } else {
+        return Promise.resolve();
+    }
+}
 
 exports.applyToAllPhantomInstances = function (fn) {
     phantomInstances.forEach(function (el) {
@@ -54,8 +139,6 @@ exports.applyToAllPhantomInstances = function (fn) {
  * @returns {*}
  */
 exports.process = function (site, dataArray, type) {
-    nPending++;
-    nRequests++;
     return scriptFiles.get(site)
         .then(function (scripeFile) {
             dataArray.forEach(function (element) {
@@ -65,22 +148,17 @@ exports.process = function (site, dataArray, type) {
             });
             if (dataArray.length > 0) {
                 var r = new BatchRequest(dataArray);
-                return r.process(scrapeTimeout)
+                return r.process()
                     .then(function (response) {
                         logger.info("processed " + dataArray.length + " URLs with method " + type + " - status:" + response.status);
-                        nPending--;
                         return response;
                     }).catch(function (err) {
-                        nFailures++;
-                        nPending--;
                         return {
                             status: false,
                             message: err.message || err
                         };
                     });
             } else {
-                nPending--;
-                nFailures++;
                 return {
                     status: false,
                     message: "Nothing to do"
@@ -88,8 +166,6 @@ exports.process = function (site, dataArray, type) {
             }
         })
         .catch(function (e) {
-            nPending--;
-            nFailures++;
             logger.error(e);
             return {
                 "status": false,

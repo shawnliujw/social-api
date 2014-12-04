@@ -10,21 +10,22 @@ var path = require("path");
 var config = require("config");
 var delay = require("./../util/delayPromise")
 var maxQueueSize = 500;
-
+var timeout = require("config").casper.timeout;
 var PhantomInstance = function (options) {
     this.running = false;
     this.listening = false;
     this.emitter = new events.EventEmitter();
-    this.port = options.port;
+    this.proxy = options.proxy;
+    this.port = this.proxy.port;
     this.id = "localhost:" + this.port;
-
+    this.accounts = [];
     this.requestOptions = {
         method: 'POST',
         headers: {
             'Content-type': 'application/json',
             "charset": "utf-8"
         },
-        timeout: options.requestTimeout
+        timeout: timeout
     };
     this.queue = new ScrapeQueue(this, {
         id: this.id,
@@ -53,17 +54,18 @@ PhantomInstance.prototype.start = function () {
         return this.startPromise;
     }
 
-    return _freeupPortNumber(this.port).then(function () {
-
+    return _freeupPortNumber(me.proxy.port).then(function () {
         var childArgs = [
             "--ssl-protocol=any",// avoid "SSL handshake failed"
             path.join(__dirname, "./casperjs-server.js"),
-            me.port
+            me.proxy.port + "~" + me.proxy.username + "~" + me.proxy.password
         ];
+        if (me.proxy.ip) {
+            childArgs[0] = "--ssl-protocol=ay --set-proxy=" + me.proxy.ip;
+        }
 
         var options = {};
         options.env = process.env;
-        logger.error(childArgs);
         me.process = Process.spawn(binPath, childArgs, options);
         me.process.stderr.on('data', function (data) {
             logger.error("phantomjs worker " + me.id + " stderr:", data.toString())
@@ -146,7 +148,6 @@ PhantomInstance.prototype.request = function (path, data) {
                 if (me.listening) {
                     logger.warn("phantomjs worker " + me.id + " request error: ", err);
                     switch (err.code) {
-
                         case 'ESOCKETTIMEDOUT':
                         case 'ETIMEDOUT':
                             // if timeout or connection reset, process is probably hosed.
@@ -162,7 +163,6 @@ PhantomInstance.prototype.request = function (path, data) {
                                 });
                             });
                             break;
-
                         default:
                             reject({
                                 message: err.code

@@ -5,12 +5,12 @@ var delay = require("./../util/delayPromise")
 var timeout = require("config").casper.timeout;
 var _requestId = 1;
 
-function BatchRequest(pages) {
+function BatchRequest(accounts) {
     this.id = "br." + _requestId++;
-    this.pages = pages;
+    this.accounts = accounts;
 
     // tack on a request id to each scraped page for check-pointing
-    this.pages.forEach(function (el) {
+    this.accounts.forEach(function (el) {
         el._bid = this.id;
     }.bind(this));
 
@@ -25,7 +25,9 @@ BatchRequest.prototype.process = function () {
         logger.info("batch request " + this.id + " processing");
         var br = this;
         if (!timeout) {
-            timeout = 45000;
+            timeout = 5*60*000;
+        } else {
+            timeout = timeout * this.accounts.length * 1000;
         }
         // batch time out in case a request gets lost
         if (timeout) {
@@ -34,7 +36,7 @@ BatchRequest.prototype.process = function () {
                     logger.error("batch request " + br.id + " timed out");
                     br.abort("batch timeout exceeded");
                 }
-            }, timeout * this.pages.length);
+            }, timeout * this.accounts.length);
         }
 
         this.promise = new Promise(function (resolve, reject) {
@@ -47,11 +49,11 @@ BatchRequest.prototype.process = function () {
         // the caller before any resolution of it occurs.
         delay(10).then(function () {
             br.processing = true;
-            br.pages.forEach(function (el) {
+            br.accounts.forEach(function (account) {
                 if (br.processing) {
-                    dispatcher.getAvailablePhantomInstance().then(function (phantom) {
+                    dispatcher.getAvailablePhantomInstance(account).then(function (phantom) {
                         if (br.processing) {
-                            phantom.queue.push(el, br);
+                            phantom.queue.push(account, br);
                         }
                     }).catch(function (err) {
                         // cannot get a phantom instance.  fail the whole request
@@ -108,11 +110,11 @@ BatchRequest.prototype.appendResults = function (data) {
 
         this.response.results = this.response.results.concat(data);
 
-        if (this.response.results.length >= this.pages.length) {
+        if (this.response.results.length >= this.accounts.length) {
             this.response.status = true;
             _resolve(this);
         } else {
-            logger.info("batch request " + this.id + " got " + this.response.results.length + " out of " + this.pages.length + " results expected");
+            logger.info("batch request " + this.id + " got " + this.response.results.length + " out of " + this.accounts.length + " results expected");
         }
     }
 };

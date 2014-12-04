@@ -2,16 +2,21 @@
   "listener": {
     "port": 8586
   },
-  "ports": [
-    8587
+  "proxies": [
+    {
+      "ip": "",
+      "username": "",
+      "password": "",
+      "port": 8587
+    }
   ],
   "casper": {
-    "timeout": 45000,
+    "timeout": 1800,
     "logLevel": "debug"
   },
-  "maxQueueSize": 200,
-  "maxWorkerJobs": 400,
-  "maxWorkerLifetime": 7200,
+  "maxQueueSize": 10,
+  "maxWorkerJobs": 100,
+  "maxWorkerLifetime": 172800,
   "nodeLog": {
     "configuration": {
       "appenders": [
@@ -20,7 +25,7 @@
         }
       ],
       "levels": {
-        "[all]": "warning"
+        "[all]": "debug"
       },
       "replaceConsole": true
     }

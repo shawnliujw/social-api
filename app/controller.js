@@ -7,6 +7,10 @@ exports.registration = function (req, res) {
     var site = req.params.site;
     var body = req.body ? req.body.accounts : null;
     if (body) {
+        body = body.map(function (ac) {
+            ac.site = site;
+            return ac;
+        });
         dispatcher.process(site, body, "registration")
             .then(function (result) {
                 res.json(result);
