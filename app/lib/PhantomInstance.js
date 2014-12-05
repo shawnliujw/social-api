@@ -147,6 +147,7 @@ PhantomInstance.prototype.request = function (path, data) {
             if (err) {
                 if (me.listening) {
                     logger.warn("phantomjs worker " + me.id + " request error: ", err);
+                    logger.error(url);
                     switch (err.code) {
                         case 'ESOCKETTIMEDOUT':
                         case 'ETIMEDOUT':

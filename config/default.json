@@ -12,7 +12,7 @@
   ],
   "casper": {
     "timeout": 1800,
-    "logLevel": "debug"
+    "logLevel": "error"
   },
   "maxQueueSize": 10,
   "maxWorkerJobs": 100,

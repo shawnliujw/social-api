@@ -20,7 +20,6 @@ ScrapeQueue.prototype.size = function () {
 };
 
 ScrapeQueue.prototype.push = function (page, batch) {
-    logger.error(page);
     if (this.options.maxSize && this.jobs.length >= this.options.maxSize) {
         logger.warn('Job queue ' + this.id + ' is full : ' + this.jobs.length);
         return false;
@@ -41,10 +40,10 @@ ScrapeQueue.prototype.push = function (page, batch) {
             function (callback) {
                 var job = q.jobs.shift();
                 job.attempt = job.attempt || 1;
-                var phantomAccounts = this.phantom.accounts;
+                var phantomAccounts = q.phantom.accounts;
                 var m = job.site + "@" + job.email;
                 if (!_.contains(phantomAccounts, m)) {
-                    this.phantom.accounts.push(m);
+                    q.phantom.accounts.push(m);
                 }
                 logger.info('job queue ' + q.id + ' - processing ' + job.url + ' for request ' + batch.id);
                 //TODO

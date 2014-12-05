@@ -3,7 +3,7 @@
  */
 'use strict'
 var dispatcher = require("./lib/dispatcher");
-
+var logger = require("log4js").getLogger("app/controller.js");
 //// required data for registration
 //var registrationAccounts = [
 //    {
@@ -58,30 +58,32 @@ exports.registration = function (req, res) {
 //            "password": ""
 //        }
 //    ],
-//    "operation": {
-//        "type": "followByName",// followBySearch,tweet,retweet,favourite tweet,scrapeTweets,scrapeAccounts
+//    "operation": [{
+//        "type": "followByFollowers",// followBySearch,tweet,retweet,favourite tweet
 //        "condition": ""// here should be the search item if it's  needed in the searchType
-//    }
+//    }]
 //}
 exports.operate = function (req, res) {
     var site = req.params.site;
     var body = req.body;
     if (body && body.accounts && body.operation) {
-        body = body.map(function (ac) {
+        var accounts = body.accounts.map(function (ac) {
             ac.site = site;
             ac.operation = body.operation;
             return ac;
         });
-        dispatcher.process(site, body, "operation")
+        //res.json({
+        //    "status": true,
+        //    "message": "your request are being proceed"
+        //});
+        dispatcher.process(site, accounts, "operation")
             .then(function (result) {
                 res.json(result);
             })
             .catch(function (err) {
-                res.json({
-                    "status": false,
-                    "message": err.message || err
-                });
-            })
+                logger.error(err);
+            });
+
     } else {
         res.statusCode = 400;
         res.json({
@@ -106,6 +108,12 @@ exports.operate = function (req, res) {
 //]
 exports.updateProxy = function (req, res) {
 
+}
+
+exports.scrape = function (req, res) {
+    var site = req.params.site;
+    var type = req.params.type;
+    var accounts = req.body;//[{"username":"xxx","password":""},{}]
 }
 
 function _scrape(req) {

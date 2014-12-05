@@ -73,8 +73,6 @@ exports.getAvailablePhantomInstance = function (ac) {
             }
             return Promise.reject("All queues are full");
         });
-
-
 };
 
 exports.refreshProxies = refreshProxies;

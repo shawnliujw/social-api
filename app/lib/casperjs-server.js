@@ -11,7 +11,7 @@ var casper = require('casper').create({
     logLevel: 'debug'
 });
 
-var config = {};
+var config = {"port": 8587};
 if (system.args[4]) {
     var t = system.args[4].split("~");
     if (t[0]) {
@@ -32,7 +32,7 @@ var CookieTool = require("./cookie.js");
 //    'domain': 'www.lagranderecre.fr'
 //});
 casper.start();
-var timeout = 10000;//10 seconds
+var timeout = 30000;//10 seconds
 var serverStatus = server.listen(config.port, function (request, response) {
     casper.then(function () {
         //var method = request.method;
@@ -40,9 +40,7 @@ var serverStatus = server.listen(config.port, function (request, response) {
             case "/process" :
             {
                 var postData = request.post;
-                postData = this.evaluate(function (s) {
-                    return JSON.parse(s);
-                }, postData);
+                postData = JSON.parse(postData);
                 if (postData) {
                     _process(postData, response);
                 } else {
@@ -86,46 +84,55 @@ if (!serverStatus) {
 }
 
 function _process(job, res) {
-    var url = job.url;
-    var method = job.method;
-    var scriptFile = job.scriptFile;
-    var json = {
-        status: false,
-        updateTime: new Date().toUTCString(),
-        postData: job
-    };
-    var script = require(scriptFile);
-    if (script) {
-        casper.thenOpen(url, function onResponse(response) {
-            json.statusCode = response.status;
-            switch (response.status) {
-                case 200 :
-                    json.statusCode = 200;
-                    try {
-                        if (script[method]) {
-                            script[method](casper, json.postData, json, timeout, function (t) {
-                                json = t;
-                            });
-                        } else {
-                            json.message = "unknown method " + method;
+
+    try {
+
+        var url = job.url;
+        var method = job.method;
+        var scriptFile = job.scriptFile;
+        var json = {
+            status: false,
+            updateTime: new Date().toUTCString(),
+            postData: job
+        };
+        casper.echo(scriptFile);
+        var script = require(scriptFile);
+        if (script) {
+            casper.thenOpen(url, function onResponse(response) {
+                json.statusCode = response.status;
+                switch (response.status) {
+                    case 200 :
+                        json.statusCode = 200;
+                        try {
+                            if (script[method]) {
+                                script[method](casper, json.postData, json, timeout, function (t) {
+                                    json = t;
+                                });
+                            } else {
+                                json.message = "unknown method " + method;
+                            }
+                        } catch (e) {
+                            json.message = e.message;
                         }
-                    } catch (e) {
-                        json.message = e.message;
-                    }
-                    break;
-                default:
-                    json.status = false;
-                    json.message = "Failed to access retailer site " + url + " - "
-                    + (response ? JSON.stringify(response) : "");
-            }
+                        break;
+                    default:
+                        json.status = false;
+                        json.message = "Failed to access retailer site " + url + " - "
+                        + (response ? JSON.stringify(response) : "");
+                }
 
-        }, function onTimeout() {
-            json.message = "Timeout opening " + url;
-        }, timeout);
+            }, function onTimeout() {
+                json.message = "Timeout opening " + url;
+            }, timeout);
 
-    } else {
-        json.message = scriptFile + " not found";
+        } else {
+            json.message = scriptFile + " not found";
+        }
+    } catch (e) {
+        json.e = e;
+        casper.log(JSON.stringify(e), "error");
     }
+
     casper.then(function () {
         _outputJSON(json, res);
     });

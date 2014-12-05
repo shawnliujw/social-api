@@ -56,6 +56,7 @@ BatchRequest.prototype.process = function () {
                             phantom.queue.push(account, br);
                         }
                     }).catch(function (err) {
+                        logger.error(err);
                         // cannot get a phantom instance.  fail the whole request
                         br.processing = false;
                         br.response.status = false;
