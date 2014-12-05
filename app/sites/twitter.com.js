@@ -3,27 +3,32 @@
  */
 var tools = require("../util/tools");
 var site = "twitter.com";
-exports.registration = function (casper, data, result, timeout, callback) {
+exports.registration = function (casper, result, timeout, callback) {
 
 }
 
-exports.edit = function (casper, data, result, timeout, callback) {
+exports.edit = function (casper, result, timeout, callback) {
 
 }
 
-exports.operation = function (casper, data, result, timeout, callback) {
+exports.operation = function (casper, result, timeout, callback) {
+    var data = result.postData;
     var ops = data.operation;
+    result.dts = ops;
     if (ops && ops.length > 0) {
         try {
             _login(casper, data, result, timeout, callback, function () {//login before do any operation
-                casper.capture("after login.png");
                 function _repeat(time) {
-                    casper.wait(1000, function () {
-                        _handleOperation(ops[time - 1], function finish() {
-                            time--;
-                            _repeat(time);
-                        }, callback, result, timeout, casper)
-                    });
+                    if (time <= 0) {
+                        return;
+                    } else {
+                        casper.wait(1000, function () {
+                            _handleOperation(ops[time - 1], function finish() {
+                                time--;
+                                _repeat(time);
+                            }, callback, result, timeout, casper)
+                        });
+                    }
                 }
 
                 _repeat(ops.length);
@@ -67,38 +72,48 @@ function _handleOperation(op, callback, errorCallback, result, timeout, casper) 
 
 
 function _followByFollowers(casper, result, timeout, callback) {
-
-    casper.thenClick("#page-container > div.dashboard.dashboard-left.home-exp-tweetbox > div.DashboardProfileCard.module > div > div.DashboardProfileCard-stats > ul > li:nth-child(3) > a > span.DashboardProfileCard-statLabel.u-block");
-    casper.then(function () {
-        casper.waitUntilVisible(".GridTimeline-items", function () {
-            var total = casper.fetchText("#page-container > div.ProfileCanopy.ProfileCanopy--withNav.ProfileCanopy--large > div > div.ProfileCanopy-navBar > div.AppContainer > div > div.Grid-cell.u-size2of3.u-lg-size3of4 > div > div > ul > li.ProfileNav-item.ProfileNav-item--followers.is-active > a > span.ProfileNav-value");
-            total = parseInt(total);
-            function _follow(time) {
-                casper.wait(tools.random(20, 90) * 1000, function () {
-                    if (casper.exists(".GridTimeline-items .user-actions-follow-button:nth-child(" + time + ")")) {
-                        casper.click(".GridTimeline-items .user-actions-follow-button:nth-child(" + time + ")");
-                        time--;
-                        if (time === 0) {
-                            return;
+    var followButtonS = "#page-container > div.dashboard.dashboard-left.home-exp-tweetbox > div.DashboardProfileCard.module > div > div.DashboardProfileCard-stats > ul > li:nth-child(3) > a > span.DashboardProfileCard-statLabel.u-block";
+    casper.waitUntilVisible(followButtonS, function () {
+        casper.click(followButtonS);
+        casper.then(function () {
+            tools.getScreenShot(casper, site, "beginToFollow");
+            casper.waitUntilVisible(".GridTimeline-items", function () {
+                var total = casper.fetchText("#page-container > div.ProfileCanopy.ProfileCanopy--withNav.ProfileCanopy--large > div > div.ProfileCanopy-navBar > div.AppContainer > div > div.Grid-cell.u-size2of3.u-lg-size3of4 > div > div > ul > li.ProfileNav-item.ProfileNav-item--followers.is-active > a > span.ProfileNav-value");
+                total = parseInt(total);
+                function _follow(time) {
+                    casper.wait(tools.random(20, 90) * 1000, function () {
+                        if (casper.exists(".GridTimeline-items .user-actions-follow-button:nth-child(" + time + ")")) {
+                            casper.click(".GridTimeline-items .user-actions-follow-button:nth-child(" + time + ")");
+                            time--;
+                            if (time === 0) {
+                                return;
+                            } else {
+                                _follow(time);
+                            }
                         } else {
-                            _follow(time);
+                            result.message = "follow button doesn't exist";
+                            result.status = false;
+                            tools.getScreenShot(casper,site,"followButtonNotfound");
+                            callback(result);
                         }
-                    } else {
-                        result.message = "follow button doesn't exist";
-                        callback(result);
-                    }
 
-                });
-            }
+                    });
+                }
 
-            _follow(total);
-        }, function () {
-            result.status = false;
-            result.message = "Wait timeout when waiting all follower appear.";
-            tools.getScreenShot(casper, data.site, "followByFollowersFailed");
-            callback(result);
-        }, timeout)
-    })
+                _follow(total);
+            }, function () {
+                result.status = false;
+                result.message = "Wait timeout when waiting all follower appear.";
+                tools.getScreenShot(casper, data.site, "followByFollowersFailed");
+                callback(result);
+            }, timeout)
+        })
+    }, function () {
+        result.message = "can not find follow button on home page";
+        callback(result);
+    }, timeout);
+
+
 }
 
 
@@ -132,20 +147,17 @@ function _followBySearch(casper, text, result, timeout, callback) {
 function _login(casper, data, result, timeout, callback, executeCallback) {
     site = data.site;
     casper.capture("begin login.png");
-    casper.waitUntilVisible("#frontpage-signup-form #signin-email", function () {
-        casper.waitUntilVisible("#frontpage-signup-form > button", function () {
-            casper.sendKeys("#frontpage-signup-form > div:nth-child(1) > input", data.fullName || "");
-            casper.sendKeys("#frontpage-signup-form > div:nth-child(2) > input", data.email);
-        }, function timeout() {
-            result.status = false;
-            result.message = "Wait timeout for registration button";
-            tools.getScreenShot(casper, data.site, "loginFailed");
-            callback(result);
-        }, timeout);
-        casper.thenClick("#submit_button", function () {
-            casper.wait(2000, function () {
-                if (casper.exists(".message-text") && casper.fetchText(".message-text") !== '') {
+    casper.waitUntilVisible("#signin-email", function () {
+        //casper.sendKeys("#signin-email", data.email);
+        //casper.sendKeys("#signin-password", data.password);
+        this.sendKeys("#signin-email", "sdfsdf@t1.com");
+        this.sendKeys("#signin-password", "qweasd123");
+        var loginButton = "#front-container > div.front-card > div.front-signin.js-front-signin > form > table > tbody > tr > td.flex-table-secondary > button";
+        casper.thenClick(loginButton, function () {
+            casper.waitWhileVisible(loginButton, function () {
+                if (casper.exists("#page-container > div > div.signin-wrapper > form > div.clearfix > button")) {
                     result.status = false;
+                    result.data = data;
                     result.message = "username or password wrong";
                     tools.getScreenShot(casper, data.site, "loginFailed");
                     callback(result);
@@ -161,7 +173,7 @@ function _login(casper, data, result, timeout, callback, executeCallback) {
             }, timeout);
         });
     }, function () {
-        capsper.log("can't find email input . assume no need login","error");
+        capsper.log("can't find email input . assume no need login", "error");
         tools.getScreenShot(casper, data.site, "noNeedLogin");
         executeCallback();// no need login anymore
     }, timeout);

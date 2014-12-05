@@ -32,7 +32,7 @@ var CookieTool = require("./cookie.js");
 //    'domain': 'www.lagranderecre.fr'
 //});
 casper.start();
-var timeout = 30000;//10 seconds
+var timeout = 10000;//10 seconds
 var serverStatus = server.listen(config.port, function (request, response) {
     casper.then(function () {
         //var method = request.method;
@@ -105,7 +105,7 @@ function _process(job, res) {
                         json.statusCode = 200;
                         try {
                             if (script[method]) {
-                                script[method](casper, json.postData, json, timeout, function (t) {
+                                script[method](casper, json, timeout, function (t) {
                                     json = t;
                                 });
                             } else {
