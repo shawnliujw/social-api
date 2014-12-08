@@ -4,9 +4,30 @@
 var tools = require("../util/tools");
 var site = "twitter.com";
 exports.registration = function (casper, result, timeout, callback) {
+    var data = result.postData;
+    if (data) {
+        casper.then(function () {
+            _registration(casper, data, result, timeout, callback);
+        });
 
+        casper.then(function () {
+
+        });
+
+
+    } else {
+        result.status = false;
+        result.message = "missed required fields";
+    }
 }
 
+
+function _registration(casper, formData, result, timeout, callback) {
+
+    casper.wait(tools.random(20, 90), function () {
+
+    });
+}
 exports.edit = function (casper, result, timeout, callback) {
 
 }
@@ -23,7 +44,7 @@ exports.operation = function (casper, result, timeout, callback) {
                         return;
                     } else {
                         casper.wait(1000, function () {
-                            _handleOperation(ops[time - 1], function finish() {
+                            _handleOperation(ops[time - 1], data.email, function finish() {
                                 time--;
                                 _repeat(time);
                             }, callback, result, timeout, casper)
@@ -48,16 +69,16 @@ exports.operation = function (casper, result, timeout, callback) {
 
 }
 
-function _handleOperation(op, callback, errorCallback, result, timeout, casper) {
+function _handleOperation(op, email, callback, errorCallback, result, timeout, casper) {
     switch (op.type) {
         case "followByFollowers" :
         {
-            _followByFollowers(casper, result, timeout, callback);
+            _followByFollowers(casper, email, result, timeout, callback);
             break;
         }
         case "followBySearch":
         {
-            _followBySearch(casper, result, timeout, callback);
+            _followBySearch(casper, email, result, timeout, callback);
             break;
         }
         default :
@@ -71,33 +92,59 @@ function _handleOperation(op, callback, errorCallback, result, timeout, casper) 
 }
 
 
-function _followByFollowers(casper, result, timeout, callback) {
+function _followByFollowers(casper, email, result, timeout, callback) {
     var followButtonS = "#page-container > div.dashboard.dashboard-left.home-exp-tweetbox > div.DashboardProfileCard.module > div > div.DashboardProfileCard-stats > ul > li:nth-child(3) > a > span.DashboardProfileCard-statLabel.u-block";
     casper.waitUntilVisible(followButtonS, function () {
         casper.click(followButtonS);
         casper.then(function () {
-            tools.getScreenShot(casper, site, "beginToFollow");
+            tools.getScreenShot(casper, site, email, "beginToFollow");
             casper.waitUntilVisible(".GridTimeline-items", function () {
                 var total = casper.fetchText("#page-container > div.ProfileCanopy.ProfileCanopy--withNav.ProfileCanopy--large > div > div.ProfileCanopy-navBar > div.AppContainer > div > div.Grid-cell.u-size2of3.u-lg-size3of4 > div > div > ul > li.ProfileNav-item.ProfileNav-item--followers.is-active > a > span.ProfileNav-value");
                 total = parseInt(total);
                 function _follow(time) {
-                    casper.wait(tools.random(20, 90) * 1000, function () {
-                        if (casper.exists(".GridTimeline-items .user-actions-follow-button:nth-child(" + time + ")")) {
-                            casper.click(".GridTimeline-items .user-actions-follow-button:nth-child(" + time + ")");
-                            time--;
-                            if (time === 0) {
-                                return;
-                            } else {
-                                _follow(time);
-                            }
-                        } else {
-                            result.message = "follow button doesn't exist";
-                            result.status = false;
-                            tools.getScreenShot(casper,site,"followButtonNotfound");
-                            callback(result);
-                        }
 
-                    });
+                    casper.waitUntilVisible("#stream-item-user-2872488593 > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > button:nth-child(2)", function () {
+                        tools.getScreenShot(casper, site, email, "followTimes" + time);
+                        casper.wait(tools.random(20, 90) * 1000, function () {
+                            time = parseInt(time);
+                            casper.click("GridTimeline-items .user-actions-follow-button .following-text");
+                            //result.buttonLength = this.evaluate(function (index) {
+                            //    var buttons = document.querySelectorAll(".GridTimeline-items .user-actions-follow-button .following-text");
+                            //    buttons[0].click();
+                            //    return buttons ? buttons.length : 0;
+                            //}, time);
+                            //casper.wait(2000, function () {
+                            //    casper.capture("AfterClickFollow" + time + ".png");
+                            //    time--;
+                            //    if (time === 0) {
+                            //        return;
+                            //    } else {
+                            //        _follow(time);
+                            //    }
+                            //});
+                            if (casper.exists(".GridTimeline-items .user-actions-follow-button:nth-child(" + time + ") .following-text")) {
+                                casper.click(".GridTimeline-items .user-actions-follow-button:nth-child(" + time + ") .following-text");
+                                time--;
+                                if (time === 0) {
+                                    return;
+                                } else {
+                                    _follow(time);
+                                }
+                            } else {
+                                result.message = "follow button doesn't exist";
+                                result.status = false;
+                                tools.getScreenShot(casper, site, email, "followButtonNotfound");
+                                callback(result);
+                            }
+
+                        });
+                    }, function () {
+                        result.message = "wait timeout for follow button selector";
+                        result.status = false;
+                        tools.getScreenShot(casper, site, email, "followButtonTimeout");
+                        callback(result);
+                    }, timeout);
+
                 }
 
                 _follow(total);
@@ -117,13 +164,13 @@ function _followByFollowers(casper, result, timeout, callback) {
 }
 
 
-function _followBySearch(casper, text, result, timeout, callback) {
+function _followBySearch(casper, email, text, result, timeout, callback) {
     casper.waitUntilVisible("#search-query", function () {
         this.sendKeys("#search-query", text);
         casper.thenClick("#global-nav-search > span > button");
         casper.then(function () {
             casper.waitUntilVisible("#content-main-heading", function () {
-                tools.getScreenShot(casper, site, "followBySearchSuccess");
+                tools.getScreenShot(casper, site, email, "followBySearchSuccess");
                 //casper.click("ol.big-avatar-list li:nth-child(1) button.user-actions-follow-button");
                 if (casper.exists("ol.big-avatar-list li:nth-child(1) button.user-actions-follow-button")) {
                     casper.click("ol.big-avatar-list li:nth-child(1) button.user-actions-follow-button");
@@ -134,7 +181,7 @@ function _followBySearch(casper, text, result, timeout, callback) {
             }, function () {
                 result.status = false;
                 result.message = "wait timeout for selector '#global-nav-search > span > button'";
-                tools.getScreenShot(casper, site, "searchError");
+                tools.getScreenShot(casper, site, email, "searchError");
             }, timeout);
         });
     }, function () {
@@ -146,35 +193,35 @@ function _followBySearch(casper, text, result, timeout, callback) {
 
 function _login(casper, data, result, timeout, callback, executeCallback) {
     site = data.site;
-    casper.capture("begin login.png");
-    casper.waitUntilVisible("#signin-email", function () {
+    casper.capture("beginLogin.png");
+    var loginButton = "#front-container > div.front-card > div.front-signin.js-front-signin > form > table > tbody > tr > td.flex-table-secondary > button";
+    casper.waitUntilVisible(loginButton, function () {
         //casper.sendKeys("#signin-email", data.email);
         //casper.sendKeys("#signin-password", data.password);
-        this.sendKeys("#signin-email", "sdfsdf@t1.com");
-        this.sendKeys("#signin-password", "qweasd123");
-        var loginButton = "#front-container > div.front-card > div.front-signin.js-front-signin > form > table > tbody > tr > td.flex-table-secondary > button";
+        casper.sendKeys("#signin-email", "sdfsdf@t1.com");
+        casper.sendKeys("#signin-password", "qweasd123");
         casper.thenClick(loginButton, function () {
             casper.waitWhileVisible(loginButton, function () {
                 if (casper.exists("#page-container > div > div.signin-wrapper > form > div.clearfix > button")) {
                     result.status = false;
                     result.data = data;
                     result.message = "username or password wrong";
-                    tools.getScreenShot(casper, data.site, "loginFailed");
+                    tools.getScreenShot(casper, data.site, data.email, "loginFailed");
                     callback(result);
                 } else {
-                    tools.getScreenShot(casper, data.site, "loginSuccess");
+                    tools.getScreenShot(casper, data.site, data.email, "loginSuccess");
                     executeCallback();
                 }
             }, function () {
                 result.status = false;
-                result.message = "username or password wrong";
-                tools.getScreenShot(casper, data.site, "loginFailed");
+                result.message = "username or password wrong1";
+                tools.getScreenShot(casper, data.site, data.email, "loginButtonMissed");
                 callback(result);
             }, timeout);
         });
     }, function () {
         capsper.log("can't find email input . assume no need login", "error");
-        tools.getScreenShot(casper, data.site, "noNeedLogin");
+        tools.getScreenShot(casper, data.site, data.email, "noNeedLogin");
         executeCallback();// no need login anymore
     }, timeout);
 

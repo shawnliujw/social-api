@@ -24,7 +24,7 @@ var logger = require("log4js").getLogger("app/controller.js");
 //
 exports.registration = function (req, res) {
     var site = req.params.site;
-    var body = req.body ? req.body.accounts : null;
+    var body = req.body;
     if (body) {
         body = body.map(function (ac) {
             ac.site = site;

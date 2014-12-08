@@ -61,7 +61,7 @@ PhantomInstance.prototype.start = function () {
             me.proxy.port + "~" + me.proxy.username + "~" + me.proxy.password
         ];
         if (me.proxy.ip) {
-            childArgs[0] = "--ssl-protocol=ay --set-proxy=" + me.proxy.ip;
+            childArgs[0] = "--ssl-protocol=ay --proxy=" + me.proxy.ip +" --proxy-auth="+me.proxy.username+":"+me.proxy.password;
         }
 
         var options = {};
