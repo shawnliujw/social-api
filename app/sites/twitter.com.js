@@ -124,20 +124,25 @@ function _followByFollowers(casper, email, result, timeout, callback) {
                             //        _follow(time);
                             //    }
                             //});
-                            if (casper.exists(".GridTimeline-items .Icon--follow:nth-child(1)")) {
-                                casper.click(".GridTimeline-items .Icon--follow:nth-child(1)");
-                                time--;
-                                if (time === 0) {
-                                    return;
+
+                            casper.waitUntilVisible(".GridTimeline-items .Icon--follow:nth-child(1)", function () {
+                                if (casper.exists(".GridTimeline-items .Icon--follow:nth-child(1)")) {
+                                    casper.click(".GridTimeline-items .Icon--follow:nth-child(1)");
+                                    time--;
+                                    if (time === 0) {
+                                        return;
+                                    } else {
+                                        _follow(time);
+                                    }
                                 } else {
-                                    _follow(time);
+                                    result.message = "follow button doesn't exist";
+                                    result.status = false;
+                                    tools.getScreenShot(casper, site, email, "followButtonNotfound");
+                                    callback(result);
                                 }
-                            } else {
-                                result.message = "follow button doesn't exist";
-                                result.status = false;
-                                tools.getScreenShot(casper, site, email, "followButtonNotfound");
-                                callback(result);
-                            }
+                            }, function () {
+
+                            }, timeout);
 
                         });
 
@@ -203,9 +208,10 @@ function _login(casper, data, result, timeout, callback, executeCallback) {
     var loginButton = "#front-container > div.front-card > div.front-signin.js-front-signin > form > table > tbody > tr > td.flex-table-secondary > button";
     casper.waitUntilVisible(loginButton, function () {
         casper.sendKeys("#signin-email", data.email);
+        casper.echo("------------------------------------------------------PASSWORD1:" + data.password);
         casper.wait(500);
-        casper.echo("PASSWORD:"+data.password);
         casper.sendKeys("#signin-password", data.password);
+        casper.echo("------------------------------------------------------PASSWORD2:" + casper.fetchText("#signin-password"));
         //casper.sendKeys("#signin-email", "sdfsdf@t1.com");
         //casper.sendKeys("#signin-password", "qweasd123");
         casper.wait(3000, function () {
