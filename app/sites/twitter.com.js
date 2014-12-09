@@ -35,7 +35,6 @@ exports.edit = function (casper, result, timeout, callback) {
 exports.operation = function (casper, result, timeout, callback) {
     var data = result.postData;
     var ops = data.operation;
-    result.dts = ops;
     if (ops && ops.length > 0) {
         try {
             _login(casper, data, result, timeout, callback, function () {//login before do any operation
@@ -99,15 +98,18 @@ function _followByFollowers(casper, email, result, timeout, callback) {
         casper.then(function () {
             tools.getScreenShot(casper, site, email, "beginToFollow");
             casper.waitUntilVisible(".GridTimeline-items", function () {
-                var total = casper.fetchText("#page-container > div.ProfileCanopy.ProfileCanopy--withNav.ProfileCanopy--large > div > div.ProfileCanopy-navBar > div.AppContainer > div > div.Grid-cell.u-size2of3.u-lg-size3of4 > div > div > ul > li.ProfileNav-item.ProfileNav-item--followers.is-active > a > span.ProfileNav-value");
-                total = parseInt(total);
-                function _follow(time) {
+                var total = this.evaluate(function () {
+                    var nodes = document.querySelectorAll(".GridTimeline-items .Icon--follow");
+                    return nodes ? nodes.length : 0;
+                })
 
-                    casper.waitUntilVisible("#stream-item-user-2872488593 > div:nth-child(1) > div:nth-child(2) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > button:nth-child(2)", function () {
+                function _follow(time) {
+                    casper.wait(timeout, function () {
+
                         tools.getScreenShot(casper, site, email, "followTimes" + time);
                         casper.wait(tools.random(20, 90) * 1000, function () {
                             time = parseInt(time);
-                            casper.click("GridTimeline-items .user-actions-follow-button .following-text");
+                            //casper.click(".GridTimeline-items .user-actions-follow-button .Icon--follow");
                             //result.buttonLength = this.evaluate(function (index) {
                             //    var buttons = document.querySelectorAll(".GridTimeline-items .user-actions-follow-button .following-text");
                             //    buttons[0].click();
@@ -122,8 +124,8 @@ function _followByFollowers(casper, email, result, timeout, callback) {
                             //        _follow(time);
                             //    }
                             //});
-                            if (casper.exists(".GridTimeline-items .user-actions-follow-button:nth-child(" + time + ") .following-text")) {
-                                casper.click(".GridTimeline-items .user-actions-follow-button:nth-child(" + time + ") .following-text");
+                            if (casper.exists(".GridTimeline-items .Icon--follow:nth-child(" + time + ")")) {
+                                casper.click(".GridTimeline-items .Icon--follow:nth-child(" + time + ")");
                                 time--;
                                 if (time === 0) {
                                     return;
@@ -138,6 +140,7 @@ function _followByFollowers(casper, email, result, timeout, callback) {
                             }
 
                         });
+
                     }, function () {
                         result.message = "wait timeout for follow button selector";
                         result.status = false;
@@ -147,7 +150,10 @@ function _followByFollowers(casper, email, result, timeout, callback) {
 
                 }
 
-                _follow(total);
+                if (total > 0) {
+                    _follow(total);
+                }
+
             }, function () {
                 result.status = false;
                 result.message = "Wait timeout when waiting all follower appear.";
@@ -196,15 +202,14 @@ function _login(casper, data, result, timeout, callback, executeCallback) {
     casper.capture("beginLogin.png");
     var loginButton = "#front-container > div.front-card > div.front-signin.js-front-signin > form > table > tbody > tr > td.flex-table-secondary > button";
     casper.waitUntilVisible(loginButton, function () {
-        //casper.sendKeys("#signin-email", data.email);
-        //casper.sendKeys("#signin-password", data.password);
-        casper.sendKeys("#signin-email", "sdfsdf@t1.com");
-        casper.sendKeys("#signin-password", "qweasd123");
+        casper.sendKeys("#signin-email", data.email);
+        casper.sendKeys("#signin-password", data.password);
+        //casper.sendKeys("#signin-email", "sdfsdf@t1.com");
+        //casper.sendKeys("#signin-password", "qweasd123");
         casper.thenClick(loginButton, function () {
             casper.waitWhileVisible(loginButton, function () {
                 if (casper.exists("#page-container > div > div.signin-wrapper > form > div.clearfix > button")) {
                     result.status = false;
-                    result.data = data;
                     result.message = "username or password wrong";
                     tools.getScreenShot(casper, data.site, data.email, "loginFailed");
                     callback(result);
