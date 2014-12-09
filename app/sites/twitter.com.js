@@ -124,8 +124,8 @@ function _followByFollowers(casper, email, result, timeout, callback) {
                             //        _follow(time);
                             //    }
                             //});
-                            if (casper.exists(".GridTimeline-items .Icon--follow:nth-child(" + time + ")")) {
-                                casper.click(".GridTimeline-items .Icon--follow:nth-child(" + time + ")");
+                            if (casper.exists(".GridTimeline-items .Icon--follow:nth-child(1)")) {
+                                casper.click(".GridTimeline-items .Icon--follow:nth-child(1)");
                                 time--;
                                 if (time === 0) {
                                     return;
@@ -203,27 +203,33 @@ function _login(casper, data, result, timeout, callback, executeCallback) {
     var loginButton = "#front-container > div.front-card > div.front-signin.js-front-signin > form > table > tbody > tr > td.flex-table-secondary > button";
     casper.waitUntilVisible(loginButton, function () {
         casper.sendKeys("#signin-email", data.email);
+        casper.wait(500);
+        casper.echo("PASSWORD:"+data.password);
         casper.sendKeys("#signin-password", data.password);
         //casper.sendKeys("#signin-email", "sdfsdf@t1.com");
         //casper.sendKeys("#signin-password", "qweasd123");
-        casper.thenClick(loginButton, function () {
-            casper.waitWhileVisible(loginButton, function () {
-                if (casper.exists("#page-container > div > div.signin-wrapper > form > div.clearfix > button")) {
+        casper.wait(3000, function () {
+            casper.capture("123.png");
+            casper.thenClick(loginButton, function () {
+                casper.waitWhileVisible(loginButton, function () {
+                    if (casper.exists("#page-container > div > div.signin-wrapper > form > div.clearfix > button")) {
+                        result.status = false;
+                        result.message = "username or password wrong";
+                        tools.getScreenShot(casper, data.site, data.email, "loginFailed");
+                        callback(result);
+                    } else {
+                        tools.getScreenShot(casper, data.site, data.email, "loginSuccess");
+                        executeCallback();
+                    }
+                }, function () {
                     result.status = false;
-                    result.message = "username or password wrong";
-                    tools.getScreenShot(casper, data.site, data.email, "loginFailed");
+                    result.message = "username or password wrong1";
+                    tools.getScreenShot(casper, data.site, data.email, "loginButtonMissed");
                     callback(result);
-                } else {
-                    tools.getScreenShot(casper, data.site, data.email, "loginSuccess");
-                    executeCallback();
-                }
-            }, function () {
-                result.status = false;
-                result.message = "username or password wrong1";
-                tools.getScreenShot(casper, data.site, data.email, "loginButtonMissed");
-                callback(result);
-            }, timeout);
-        });
+                }, timeout);
+            });
+        })
+
     }, function () {
         capsper.log("can't find email input . assume no need login", "error");
         tools.getScreenShot(casper, data.site, data.email, "noNeedLogin");
